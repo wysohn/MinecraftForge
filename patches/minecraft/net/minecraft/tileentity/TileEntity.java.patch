@@ -1,22 +1,24 @@
 --- ../src-base/minecraft/net/minecraft/tileentity/TileEntity.java
 +++ ../src-work/minecraft/net/minecraft/tileentity/TileEntity.java
-@@ -59,6 +59,7 @@
+@@ -59,6 +59,8 @@
      public void func_145839_a(NBTTagCompound p_145839_1_)
      {
          this.field_174879_c = new BlockPos(p_145839_1_.func_74762_e("x"), p_145839_1_.func_74762_e("y"), p_145839_1_.func_74762_e("z"));
 +        if (p_145839_1_.func_74764_b("ForgeData")) this.customTileData = p_145839_1_.func_74775_l("ForgeData");
++        readCapabilities(p_145839_1_);
      }
  
      public void func_145841_b(NBTTagCompound p_145841_1_)
-@@ -75,6 +76,7 @@
+@@ -75,6 +77,8 @@
              p_145841_1_.func_74768_a("x", this.field_174879_c.func_177958_n());
              p_145841_1_.func_74768_a("y", this.field_174879_c.func_177956_o());
              p_145841_1_.func_74768_a("z", this.field_174879_c.func_177952_p());
 +            if (this.customTileData != null) p_145841_1_.func_74782_a("ForgeData", this.customTileData);
++            writeCapabilities(p_145841_1_);
          }
      }
  
-@@ -82,9 +84,10 @@
+@@ -82,9 +86,10 @@
      {
          TileEntity tileentity = null;
  
@@ -28,7 +30,7 @@
  
              if (oclass != null)
              {
-@@ -102,7 +105,17 @@
+@@ -102,7 +107,17 @@
          }
          else
          {
@@ -46,7 +48,7 @@
          }
  
          return tileentity;
-@@ -134,7 +147,6 @@
+@@ -134,7 +149,6 @@
          }
      }
  
@@ -54,7 +56,7 @@
      public double func_145835_a(double p_145835_1_, double p_145835_3_, double p_145835_5_)
      {
          double d0 = (double)this.field_174879_c.func_177958_n() + 0.5D - p_145835_1_;
-@@ -279,4 +291,146 @@
+@@ -279,4 +293,211 @@
          func_145826_a(TileEntityFlowerPot.class, "FlowerPot");
          func_145826_a(TileEntityBanner.class, "Banner");
      }
@@ -199,5 +201,70 @@
 +    public void onLoad()
 +    {
 +        // NOOP
++    }
++
++    protected final com.google.common.collect.SetMultimap<net.minecraft.util.EnumFacing,net.minecraftforge.common.capabilities.Capability<?,?>> capabilities = com.google.common.collect.LinkedHashMultimap.create();
++
++    /**
++     * Query a particular capability from a side. Always check before querying for the capability itself.
++     *
++     * @param facing    The side interaction is occurring on
++     * @param capability The capability being queried
++     * @return If the capability exists for the side
++     */
++    public final boolean hasInteractionCapability(net.minecraft.util.EnumFacing facing, net.minecraftforge.common.capabilities.Capability<?,?> capability)
++    {
++        if (capability == null)
++            return false;
++
++        return internalHasInteractionCapability(facing,capability);
++    }
++
++    /**
++     * Override for custom capability querying behaviour
++     * @param facing    The side interaction is occurring on
++     * @param capability The capability being queried
++     * @return If the capability exists for the side
++     */
++    protected boolean internalHasInteractionCapability(net.minecraft.util.EnumFacing facing, net.minecraftforge.common.capabilities.Capability<?,?> capability)
++    {
++        return capabilities.containsEntry(facing, capability);
++    }
++
++    public final <T, I extends net.minecraftforge.common.capabilities.Capability.IInteraction<T>> T getInteraction(net.minecraft.util.EnumFacing facing, net.minecraftforge.common.capabilities.Capability<?, I> capability)
++    {
++        if (capability == null)
++            return null;
++
++        return internalGetInteraction(facing, capability);
++    }
++
++    protected <T, I extends net.minecraftforge.common.capabilities.Capability.IInteraction<T>> T internalGetInteraction(net.minecraft.util.EnumFacing facing, net.minecraftforge.common.capabilities.Capability<?, I> capability)
++    {
++        return capability.interaction().forTileEntity(capability, facing, this);
++    }
++
++    protected void writeCapabilities(NBTTagCompound nbt)
++    {
++        NBTTagCompound caps = new NBTTagCompound();
++        nbt.func_74782_a("caps", caps);
++        for (java.util.Map.Entry<net.minecraft.util.EnumFacing, net.minecraftforge.common.capabilities.Capability<?,?>> e : capabilities.entries())
++        {
++            net.minecraft.util.EnumFacing facing = e.getKey();
++            net.minecraftforge.common.capabilities.Capability<?,?> cap = e.getValue();
++            NBTTagCompound tag = cap.storage().getNBTForWriting(cap, facing, this);
++            caps.func_74782_a(cap.name(), tag);
++        }
++    }
++
++    protected void readCapabilities(NBTTagCompound nbt)
++    {
++        boolean fake = !nbt.func_74764_b("caps");
++        for (java.util.Map.Entry<net.minecraft.util.EnumFacing, net.minecraftforge.common.capabilities.Capability<?,?>> e : capabilities.entries())
++        {
++            net.minecraft.util.EnumFacing facing = e.getKey();
++            net.minecraftforge.common.capabilities.Capability<?,?> cap = e.getValue();
++            cap.storage().handleNBTRead(cap, facing, this, fake ? null : nbt.func_74775_l(cap.name()));
++        }
 +    }
  }

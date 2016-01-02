@@ -27,6 +27,7 @@ import java.util.Properties;
 import java.util.Set;
 
 import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.common.capabilities.CapabilityManager;
 import net.minecraftforge.fml.common.LoaderState.ModState;
 import net.minecraftforge.fml.common.ModContainer.Disableable;
 import net.minecraftforge.fml.common.ProgressManager.ProgressBar;
@@ -545,6 +546,7 @@ public class Loader
         }
         ObjectHolderRegistry.INSTANCE.findObjectHolders(discoverer.getASMTable());
         ItemStackHolderInjector.INSTANCE.findHolders(discoverer.getASMTable());
+        CapabilityManager.INSTANCE.injectCapabilities(discoverer.getASMTable());
         modController.distributeStateMessage(LoaderState.PREINITIALIZATION, discoverer.getASMTable(), canonicalConfigDir);
         ObjectHolderRegistry.INSTANCE.applyObjectHolders();
         ItemStackHolderInjector.INSTANCE.inject();
@@ -906,9 +908,11 @@ public class Loader
      * Fire a FMLMissingMappingsEvent to let mods determine how blocks/items defined in the world
      * save, but missing from the runtime, are to be handled.
      *
-     * @param missing Map containing missing names with their associated id, blocks need to come before items for remapping.
+     * @param missingBlocks    Missing block list
+     * @param missingItems Missing item list
      * @param isLocalWorld Whether this is executing for a world load (local/server) or a client.
-     * @param gameData GameData instance where the new map's config is to be loaded into.
+     * @param remapBlocks Remapped block list
+     * @param remapItems Remapped item list
      * @return List with the mapping results.
      */
     public List<String> fireMissingMappingEvent(Map<ResourceLocation, Integer> missingBlocks, Map<ResourceLocation, Integer> missingItems, boolean isLocalWorld, Map<ResourceLocation, Integer[]> remapBlocks, Map<ResourceLocation, Integer[]> remapItems)
